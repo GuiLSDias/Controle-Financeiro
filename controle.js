@@ -11,7 +11,6 @@ const chave_transacoes_storage = "if_transacoes";
 let transacoesSalvas =
   JSON.parse(localStorage.getItem(chave_transacoes_storage)) || [];
 
-// Garante IDs incrementais
 function gerarNovoId() {
   if (transacoesSalvas.length === 0) return 0;
   return transacoesSalvas[transacoesSalvas.length - 1].id + 1;
