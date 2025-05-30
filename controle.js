@@ -1,56 +1,58 @@
 const form = document.querySelector("#form");
 const descTransacao = document.getElementById("descricao");
 const valorTransacao = document.getElementById("montante");
+const tipoTransacao = document.getElementById("tipo");
 const balanco = document.querySelector("#balanco");
 const dinnegativo = document.querySelector("#din-negativo");
 const dinpositivo = document.querySelector("#din-positivo");
 const transacoesUL = document.querySelector("#transacoes");
 const chave_transacoes_storage = "if_transacoes";
 
-let transacoesSalvas;
-try {
-  transacoesSalvas = JSON.parse(localStorage.getItem(chave_transacoes_storage));
-} catch (error) {
-  transacoesSalvas = [];
-}
+let transacoesSalvas =
+  JSON.parse(localStorage.getItem(chave_transacoes_storage)) || [];
 
-if (transacoesSalvas == null) {
-  transacoesSalvas = [];
+// Garante IDs incrementais
+function gerarNovoId() {
+  if (transacoesSalvas.length === 0) return 0;
+  return transacoesSalvas[transacoesSalvas.length - 1].id + 1;
 }
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const descricao = descTransacao.value.trim();
-  const valor = valorTransacao.value.trim();
+  const valor = parseFloat(valorTransacao.value);
+  const tipo = tipoTransacao.value;
 
-  if (descricao === "") {
+  if (!descricao) {
     alert("Campo descrição não pode ser vazio");
     descTransacao.focus();
     return;
   }
 
-  if (valor === "") {
-    alert("Campo valor não pode ser vazio");
+  if (isNaN(valor)) {
+    alert("Campo valor não pode ser vazio ou inválido");
     valorTransacao.focus();
     return;
   }
 
+  const valorFinal = tipo === "despesa" ? -Math.abs(valor) : Math.abs(valor);
+
   const transacao = {
-    id: parseInt(Math.random() * 5000),
+    id: gerarNovoId(),
     descricao: descricao,
-    valor: parseFloat(valor),
+    valor: valorFinal,
   };
 
-  somaAoSaldo(transacao);
-  somaReceitaDespesa(transacao);
-  addTransacaoALista(transacao);
-
-  transacaosSalvas.push(transacao);
+  transacoesSalvas.push(transacao);
   localStorage.setItem(
     chave_transacoes_storage,
     JSON.stringify(transacoesSalvas)
   );
+
+  addTransacaoALista(transacao);
+  atualizaValores();
+
   descTransacao.value = "";
   valorTransacao.value = "";
 });
@@ -59,33 +61,54 @@ function addTransacaoALista(transacao) {
   const operador = transacao.valor > 0 ? "" : "-";
   const classe = transacao.valor > 0 ? "positivo" : "negativo";
 
-  let liStr = `
-                ${transacao.descricao} <span>${operador} R$ ${transacao.valor}</span>
-                <button class="delete-btn" id="${transacao.id}">x</button>
-            `;
   const li = document.createElement("li");
   li.classList.add(classe);
-  li.innerHTML = liStr;
+  li.setAttribute("data-id", transacao.id);
+  li.innerHTML = `
+    ${transacao.descricao} <span>${operador} R$ ${Math.abs(
+    transacao.valor
+  ).toFixed(2)}</span>
+    <button class="delete-btn" onclick="removeTransacao(${
+      transacao.id
+    })">x</button>
+  `;
   transacoesUL.appendChild(li);
 }
 
-function somaAoSaldo(transacao) {
-  const valor = transacao.valor;
-  let total = balanco.innerHTML.trim();
-  total = total.replace("R$", "");
-  total = parseFloat(total);
+function atualizaValores() {
+  let total = 0,
+    receitas = 0,
+    despesas = 0;
 
-  total += valor;
+  transacoesSalvas.forEach((t) => {
+    total += t.valor;
+    if (t.valor > 0) receitas += t.valor;
+    else despesas += t.valor;
+  });
+
   balanco.innerHTML = `R$ ${total.toFixed(2)}`;
+  dinpositivo.innerHTML = `+ R$ ${receitas.toFixed(2)}`;
+  dinnegativo.innerHTML = `- R$ ${Math.abs(despesas).toFixed(2)}`;
 }
 
-function somaReceitaDespesa(transacao) {
-  const elemento = transacao.valor > 0 ? dinpositivo : dinnegativo;
-  const substituir = transacao.valor > 0 ? "+ R$" : "- R$";
+function removeTransacao(id) {
+  transacoesSalvas = transacoesSalvas.filter((t) => t.id !== id);
+  localStorage.setItem(
+    chave_transacoes_storage,
+    JSON.stringify(transacoesSalvas)
+  );
 
-  let valor = elemento.innerHTML.trim().replace(substituir, "");
-  valor = parseFloat(valor);
-  valor = Math.abs(valor);
-  valor += transacao.valor;
-  elemento.innerHTML = `${substituir} ${valor.toFixed(2)}`;
+  const li = document.querySelector(`li[data-id='${id}']`);
+  if (li) li.remove();
+
+  atualizaValores();
 }
+
+function carregaDados() {
+  transacoesSalvas.forEach((transacao) => {
+    addTransacaoALista(transacao);
+  });
+  atualizaValores();
+}
+
+carregaDados();

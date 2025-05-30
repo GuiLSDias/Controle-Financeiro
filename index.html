@@ -54,7 +54,13 @@
               id="montante"
               placeholder="Valor da transação em R$"
             />
-            <small>(-) negativo para despesas</small>
+            <div class="form-control">
+              <label for="tipo"><h3>Tipo</h3></label>
+              <select id="tipo">
+                <option value="receita">Receita</option>
+                <option value="despesa">Despesa</option>
+              </select>
+            </div>
           </div>
 
           <button class="btn">Adicionar</button>
